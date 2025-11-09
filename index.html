@@ -1,262 +1,397 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Knight's Tour 5×5 — Colorful Game + Auto</title>
-  <meta name="description" content="Play a colorful Knight's Tour game (5x5) with auto-generate and one-tap autoplay. Ready for Vercel." />
-  <style>
-    /* ===== Theme (Colorful) ===== */
-    :root{
-      --bg1:#0d0b2e; --bg2:#11164b; --glass:#0c1030cc; --glass2:#0d1238cc;
-      --text:#f7f8ff; --muted:#bfc7ff; --accent:#7c5cff; --accent2:#ff6ec7; --accent3:#47e6a1; --accent4:#ffd166;
-      --good:#2bd09d; --bad:#ff6b6b;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial; color:var(--text);
-      background: radial-gradient(1200px 900px at -10% -10%, #2a1f6b 0%, var(--bg1) 45%) fixed,
-                  radial-gradient(1200px 900px at 110% 110%, #0d5b70 0%, var(--bg2) 45%) fixed;
-      display:grid;place-items:center;padding:18px}
-    .app{width:min(1100px,96vw)}
-    .card{border:1px solid rgba(255,255,255,.12); border-radius:22px; overflow:hidden;
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); box-shadow:0 25px 70px rgba(0,0,0,.45)}
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Knight's Tour 5×5 — Auto Move</title>
+<style>
+  :root{
+    --bg: #f7f9fc;
+    --panel: #ffffff;
+    --accent: #4b8ef9;
+    --accent-2:#7dc3ff;
+    --text: #1a2b3c;
+    --muted:#6b7c93;
+    --cell:#f0f4fa;
+    --cell-alt:#e7eef8;
+    --cell-visited:#d7ebff;
+    --cell-current:#ffeaa7;
+    --cell-path:#c9e6ff;
+    --shadow: 0 10px 30px rgba(36, 61, 102, 0.12);
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; padding:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background:
+      radial-gradient(35rem 35rem at 10% 10%, #fff, transparent 60%),
+      radial-gradient(45rem 45rem at 90% 20%, #f2f7ff, transparent 60%),
+      linear-gradient(180deg, var(--bg), #eef3fb 70%);
+    color: var(--text);
+    min-height: 100svh;
+    display:flex; align-items:center; justify-content:center;
+    padding: 24px;
+  }
+  .app{
+    width:min(960px, 96vw);
+    background: var(--panel);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 20px 20px 24px;
+  }
+  header{
+    display:flex; align-items: center; justify-content: space-between; gap:12px;
+    padding: 6px 6px 14px;
+    border-bottom: 1px solid #e6edf7;
+  }
+  .title{
+    display:flex; align-items:center; gap:12px;
+  }
+  .logo{
+    width:36px; height:36px; border-radius:10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display:grid; place-items:center; color:white; font-weight:800;
+    box-shadow: 0 6px 16px rgba(75,142,249,.35);
+  }
+  .subtitle{ color: var(--muted); font-size: 14px; }
 
-    header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;gap:12px;
-      background:linear-gradient(90deg, #1b1f47, #161a43 40%, #161a43 60%, #1b1f47);
-      border-bottom:1px solid rgba(255,255,255,.12)}
-    h1{margin:0;font-size:clamp(18px,2.6vw,28px);letter-spacing:.3px}
-    .sub{color:var(--muted);font-size:12px}
+  .controls{
+    display:flex; flex-wrap:wrap; gap:10px;
+  }
+  button{
+    appearance:none; border:0; cursor:pointer;
+    padding:10px 14px; border-radius:12px; font-weight:700;
+    box-shadow: 0 4px 10px rgba(75,142,249,.15);
+    transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .primary{
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:white;
+  }
+  .ghost{
+    background:#eef4ff; color:#1b3b7a;
+  }
+  .soft{
+    background:#f2f6fc; color:#2b3b4d;
+  }
+  button:active{ transform: translateY(1px); }
 
-    .wrap{display:grid;grid-template-columns:1fr 360px;gap:18px;padding:18px}
-    @media (max-width: 900px){ .wrap{grid-template-columns:1fr} }
+  main{
+    display:grid; grid-template-columns: 1fr 340px; gap: 18px;
+    margin-top: 18px;
+  }
+  @media (max-width: 860px){
+    main{ grid-template-columns: 1fr; }
+  }
 
-    /* ===== Board ===== */
-    .board{aspect-ratio:1/1; display:grid; grid-template-columns:repeat(5,1fr); grid-template-rows:repeat(5,1fr);
-      border:1px solid rgba(255,255,255,.12); position:relative; border-radius:18px; overflow:hidden;
-      background:conic-gradient(from 0deg at 50% 50%, #0c1237, #0b1a47, #0c1237)}
-    .sq{position:relative; display:grid; place-items:center; cursor:pointer; user-select:none; font-weight:800;
-      --c1: #18204e99; --c2:#112a5a99;
-      background:linear-gradient(180deg, var(--c1), var(--c2));
-      transition:transform .08s ease}
-    .sq:nth-child(odd){ --c1:#1a2b5e99; --c2:#0f215299 }
-    .sq:hover{transform:translateY(-1px)}
-    .num{position:absolute; bottom:6px; right:8px; font-size:11px; color:#cfe1ff}
-    .sq.valid::after{content:"";position:absolute;inset:6px;border:2px dashed rgba(255,255,255,.25);border-radius:14px}
-    .sq.bad{outline:2px solid var(--bad); animation:shake .22s}
-    @keyframes shake{10%{transform:translateX(-2px)} 40%{transform:translateX(2px)} 70%{transform:translateX(-1px)} 100%{transform:translateX(0)}}
+  .board-wrap{
+    padding:16px;
+    background: linear-gradient(180deg,#fff, #f7fbff);
+    border-radius: 16px;
+    border: 1px solid #e6edf7;
+  }
+  .board{
+    --n:5;
+    display:grid;
+    grid-template-columns: repeat(var(--n), 1fr);
+    grid-auto-rows: min(80px, 18vw);
+    gap:8px;
+  }
+  .cell{
+    position:relative;
+    border-radius: 12px;
+    background: var(--cell);
+    display:grid; place-items:center;
+    font-size: 18px; font-weight: 700;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,.03);
+    transition: background .25s ease, transform .08s ease, outline .25s ease;
+    outline: 2px solid transparent;
+  }
+  .cell:nth-child(odd){ background: var(--cell); }
+  .cell:nth-child(even){ background: var(--cell-alt); }
+  .cell.visited{ background: var(--cell-visited); }
+  .cell.path{ background: var(--cell-path); }
+  .cell.current{
+    background: var(--cell-current);
+    outline-color: #ffd166;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(255,209,102,.35), inset 0 -2px 0 rgba(0,0,0,.03);
+  }
+  .badge{
+    position:absolute; top:8px; left:8px;
+    background:#fff; border:1px solid #e6edf7; color:#456; font-weight:700;
+    border-radius: 10px; font-size: 12px; padding:2px 8px;
+    box-shadow: 0 6px 12px rgba(20,40,80,.06);
+  }
+  .knight{
+    font-size: 28px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.12));
+  }
 
-    .knight{width:72%;aspect-ratio:1/1;display:grid;place-items:center;font-size:clamp(30px,6vw,60px);filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}
-
-    /* ===== Sidebar ===== */
-    .panel{background:linear-gradient(180deg, var(--glass), var(--glass2)); border:1px solid rgba(255,255,255,.12);
-      border-radius:16px;padding:14px;display:grid;gap:12px}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .badge{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:12px}
-
-    button,select{background:#12194b;color:var(--text);border:1px solid rgba(255,255,255,.18);
-      border-radius:12px;padding:10px 12px;font-weight:800;letter-spacing:.2px;cursor:pointer;transition:.15s ease}
-    button:hover{filter:brightness(1.08)}
-    .primary{background:linear-gradient(180deg, var(--accent), #5b3bff); border:none}
-    .success{background:linear-gradient(180deg, var(--accent3), #17b37f); border:none}
-    .danger{background:linear-gradient(180deg, #ff6b9a, #d44343); border:none}
-    .ghost{background:transparent}
-
-    .footer{padding:12px 16px; color:var(--muted); font-size:12px; border-top:1px solid rgba(255,255,255,.12); display:flex; gap:8px; flex-wrap:wrap; justify-content:space-between}
-
-    .brand{display:flex;align-items:center;gap:8px}
-    .brand .dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(45deg,var(--accent2),var(--accent))}
-
-    .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#0b1548;border:1px solid rgba(255,255,255,.18);padding:10px 14px;border-radius:12px;font-size:14px;display:none}
-    .show{display:block}
-
-    /* SVG path between cells */
-    .path{position:absolute; inset:0; pointer-events:none}
-    svg path{stroke:url(#grad); stroke-width:3.2; fill:none; stroke-linecap:round; stroke-linejoin:round; opacity:.95}
-  </style>
+  .side{
+    padding:16px;
+    background: linear-gradient(180deg,#fff, #f8fbff);
+    border-radius: 16px;
+    border: 1px solid #e6edf7;
+  }
+  .info-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom: 1px dashed #e6edf7; font-weight:700;
+  }
+  .info-row:last-child{ border-bottom: 0; }
+  .muted{ color: var(--muted); font-weight:600; }
+  .hint{
+    margin-top: 14px; font-size: 13px; color: var(--muted);
+    background:#f5f8ff; border:1px solid #e6edf7; padding:10px 12px; border-radius:12px;
+  }
+  .foot{
+    margin-top:16px; font-size:12px; color:#789;
+    text-align:center;
+  }
+</style>
 </head>
 <body>
-  <div class="app card" id="app">
+  <div class="app">
     <header>
-      <div>
-        <h1>Knight's Tour — 5×5 Colorful</h1>
-        <div class="sub">Manual play + hints/undo/timer, or use Auto‑Generate and **Auto Play** to watch the tour.</div>
+      <div class="title">
+        <div class="logo">N♞</div>
+        <div>
+          <div style="font-size:20px; font-weight:800;">Knight’s Tour — 5×5</div>
+          <div class="subtitle">Auto-generated tour • Click <b>Auto Move</b> to step through</div>
+        </div>
       </div>
-      <div class="brand sub"><span class="dot"></span> Made by <strong>om_ahrvar</strong></div>
+      <div class="controls">
+        <button id="autoBtn" class="primary">Auto Move ▶</button>
+        <button id="newBtn" class="ghost">New Tour 🔁</button>
+        <button id="resetBtn" class="soft">Reset ⟲</button>
+      </div>
     </header>
 
-    <div class="wrap">
-      <div class="board" id="board" aria-label="5 by 5 chessboard"></div>
-      <aside class="panel">
-        <div class="row">
-          <button class="primary" id="btn-new">New Game</button>
-          <button id="btn-hint">Hint</button>
-          <button id="btn-undo">Undo</button>
-          <button class="danger" id="btn-reset">Reset</button>
-        </div>
-        <div class="row">
-          <button class="success" id="btn-auto">Auto Generate</button>
-          <button id="btn-play">Play Auto Path</button>
-          <button id="btn-autoplay">Auto Play (1‑tap)</button>
-          <button id="btn-stop">Stop</button>
-        </div>
-        <div class="row">
-          <label class="badge" style="display:flex;align-items:center;gap:8px">Speed
-            <input type="range" id="speed" min="30" max="800" value="200" />
-          </label>
-          <select id="strategy">
-            <option value="warnsdorff" selected>Warnsdorff + BT</option>
-            <option value="backtrack">Pure Backtracking</option>
-          </select>
-          <span class="badge" id="hud-steps">Steps: 0/25</span>
-          <span class="badge" id="hud-time">Time: 00:00</span>
-        </div>
-        <div id="status" class="sub">Click any square to place your knight and start.</div>
-      </aside>
-    </div>
+    <main>
+      <section class="board-wrap">
+        <div id="board" class="board" aria-label="5 by 5 chessboard"></div>
+      </section>
 
-    <div class="footer">
-      <span>Rule: Knight moves in an L (2+1). Visit all 25 squares exactly once.</span>
-      <span>Single file • Deploy on <strong>Vercel</strong> / GitHub Pages</span>
-    </div>
+      <aside class="side">
+        <div class="info-row"><span class="muted">Board</span><span>5 × 5</span></div>
+        <div class="info-row"><span class="muted">Current Step</span><span id="stepOut">0 / 25</span></div>
+        <div class="info-row"><span class="muted">Start Square</span><span id="startOut">—</span></div>
+        <div class="info-row"><span class="muted">Status</span><span id="statusOut">Ready</span></div>
+        <div class="hint">Tip: “New Tour” random start se ek solvable tour pre-compute hota hai (fast backtracking + smart ordering). Phir “Auto Move” har click pe next move dikhata hai.</div>
+        <div class="foot">Made for you — deploy static as <code>index.html</code> on Vercel.</div>
+      </aside>
+    </main>
   </div>
 
-  <div id="toast" class="toast"></div>
+<script>
+(() => {
+  const N = 5;
+  const MOVES = [
+    [ 2, 1],[ 1, 2],[-1, 2],[-2, 1],
+    [-2,-1],[-1,-2],[ 1,-2],[ 2,-1],
+  ];
+  const boardEl = document.getElementById('board');
+  const stepOut = document.getElementById('stepOut');
+  const startOut = document.getElementById('startOut');
+  const statusOut = document.getElementById('statusOut');
+  const autoBtn = document.getElementById('autoBtn');
+  const newBtn = document.getElementById('newBtn');
+  const resetBtn = document.getElementById('resetBtn');
 
-  <svg class="path" id="path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-    <defs>
-      <linearGradient id="grad" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#7c5cff"/>
-        <stop offset="50%" stop-color="#ff6ec7"/>
-        <stop offset="100%" stop-color="#47e6a1"/>
-      </linearGradient>
-    </defs>
-  </svg>
+  let cells = [];
+  let tour = [];     // array of [r,c]
+  let step = 0;      // index into tour (0..24)
+  let started = false;
 
-  <script>
-    // ===== Game Logic (Vanilla JS) =====
-    const N=5, MOVES=[[2,1],[1,2],[-1,2],[-2,1],[-2,-1],[-1,-2],[1,-2],[2,-1]];
-    const boardEl = document.getElementById('board');
-    const pathSVG = document.getElementById('path');
-    const statusEl = document.getElementById('status');
-    const toastEl = document.getElementById('toast');
+  function id(r,c){ return r*N + c; }
+  function inBounds(r,c){ return r>=0 && c>=0 && r<N && c<N; }
 
-    // Controls
-    const btnNew = document.getElementById('btn-new');
-    const btnHint = document.getElementById('btn-hint');
-    const btnUndo = document.getElementById('btn-undo');
-    const btnReset = document.getElementById('btn-reset');
-    const btnAuto = document.getElementById('btn-auto');
-    const btnPlay = document.getElementById('btn-play');
-    const btnAutoPlay = document.getElementById('btn-autoplay');
-    const btnStop = document.getElementById('btn-stop');
-    const speedEl = document.getElementById('speed');
-    const strategyEl = document.getElementById('strategy');
-    const hudSteps = document.getElementById('hud-steps');
-    const hudTime = document.getElementById('hud-time');
-
-    // State
-    let squares=[]; // DOM squares
-    let visit=[];   // -1 unvisited else step index
-    let path=[];    // ordered {r,c}
-    let current=null; // current cell
-    let animating=false; let timerId=null; let startTime=0;
-    let autoSolution=[];
-
-    function idx(r,c){ return r*N + c; }
-    function inBounds(r,c){ return r>=0 && r<N && c>=0 && c<N; }
-    function legalMoves(r,c){ const m=[]; for(const [dr,dc] of MOVES){ const nr=r+dr,nc=c+dc; if(inBounds(nr,nc) && visit[idx(nr,nc)]===-1) m.push({r:nr,c:nc}); } return m; }
-
-    function drawBoard(){
-      boardEl.innerHTML=''; squares=[]; visit = Array(N*N).fill(-1); path=[]; current=null; autoSolution=[]; drawPath([]);
-      for(let r=0;r<N;r++) for(let c=0;c<N;c++){
-        const d=document.createElement('div'); d.className='sq'; d.dataset.r=r; d.dataset.c=c;
-        const num=document.createElement('div'); num.className='num'; d.appendChild(num);
-        const k=document.createElement('div'); k.className='knight'; k.textContent=''; d.appendChild(k);
-        d.addEventListener('click', ()=> onClick(r,c));
-        boardEl.appendChild(d); squares.push(d);
+  function buildBoard(){
+    boardEl.innerHTML = '';
+    cells = [];
+    for(let r=0; r<N; r++){
+      for(let c=0; c<N; c++){
+        const d = document.createElement('div');
+        d.className = 'cell';
+        d.dataset.r = r; d.dataset.c = c;
+        const badge = document.createElement('div');
+        badge.className = 'badge'; badge.textContent = '';
+        d.appendChild(badge);
+        boardEl.appendChild(d);
+        cells.push(d);
       }
-      status('Click any square to place your knight and start.');
-      updateHUD(true);
     }
+  }
 
-    function updateHUD(resetTime=false){ if(resetTime) hudTime.textContent='Time: 00:00'; hudSteps.textContent = `Steps: ${path.length}/${N*N}`; }
-    function formatTime(ms){ const s=Math.floor(ms/1000); const m=Math.floor(s/60); return `Time: ${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+  function clearMarks(){
+    cells.forEach(cell=>{
+      cell.classList.remove('visited','current','path');
+      cell.querySelector('.badge').textContent = '';
+      cell.innerHTML = cell.innerHTML.split('<span class="knight">')[0]; // remove knight if any
+      const existingKnight = cell.querySelector('.knight');
+      if(existingKnight) existingKnight.remove();
+    });
+    step = 0;
+    started = false;
+    updateHUD();
+  }
 
-    function startTimer(){ startTime = Date.now(); timerId && clearInterval(timerId); timerId = setInterval(()=>{ hudTime.textContent = formatTime(Date.now()-startTime); }, 300); }
-    function stopTimer(){ clearInterval(timerId); timerId=null; }
-
-    function status(msg){ statusEl.textContent=msg; }
-    function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show'); setTimeout(()=> toastEl.classList.remove('show'), 1200); }
-
-    function clearHighlights(){ squares.forEach(s=> s.classList.remove('valid','bad')); }
-
-    function place(r,c){
-      if(path.length===0) startTimer();
-      current={r,c}; path.push({r,c}); visit[idx(r,c)]=path.length;
-      const el=squares[idx(r,c)]; el.querySelector('.knight').textContent='♞'; el.querySelector('.num').textContent=path.length;
-      clearHighlights(); legalMoves(r,c).forEach(m=> squares[idx(m.r,m.c)].classList.add('valid'));
-      drawPath(path); updateHUD();
-      if(path.length===N*N){ finish(true); }
+  function placeStep(idx, cls){
+    const [r,c] = tour[idx];
+    const cell = cells[id(r,c)];
+    cell.classList.add(cls);
+    const badge = cell.querySelector('.badge');
+    badge.textContent = idx+1; // human-friendly numbering
+    if(cls === 'current'){
+      const k = document.createElement('span');
+      k.className = 'knight';
+      k.textContent = '♞';
+      cell.appendChild(k);
     }
+  }
 
-    function move(r,c){ if(!current){ place(r,c); return; } const ok = legalMoves(current.r,current.c).some(m=> m.r===r && m.c===c); if(!ok){ const e=squares[idx(r,c)]; e.classList.add('bad'); setTimeout(()=> e.classList.remove('bad'), 250); return; } squares[idx(current.r,current.c)].querySelector('.knight').textContent=''; place(r,c); }
+  function updateHUD(statusText){
+    stepOut.textContent = `${Math.min(step, N*N)} / ${N*N}`;
+    if(tour.length){
+      const [sr, sc] = tour[0];
+      startOut.textContent = `(${sr+1}, ${sc+1})`;
+    }else{
+      startOut.textContent = '—';
+    }
+    if(statusText) statusOut.textContent = statusText;
+  }
 
-    function onClick(r,c){ if(animating) return; if(visit[idx(r,c)]!==-1){ toast('Already visited'); return; } move(r,c); }
-
-    function undo(){ if(animating || path.length===0) return; const last=path.pop(); visit[idx(last.r,last.c)]=-1; const el=squares[idx(last.r,last.c)]; el.querySelector('.knight').textContent=''; el.querySelector('.num').textContent=''; current = path.length? path[path.length-1] : null; clearHighlights(); if(current){ squares[idx(current.r,current.c)].querySelector('.knight').textContent='♞'; legalMoves(current.r,current.c).forEach(m=> squares[idx(m.r,m.c)].classList.add('valid')); } else { stopTimer(); hudTime.textContent='Time: 00:00'; }
-      drawPath(path); updateHUD(); }
-
-    function reset(){ animating=false; stopTimer(); startTime=0; drawBoard(); }
-
-    function finish(){ animating=false; stopTimer(); status('🎉 Tour complete!'); toast('Tour complete!'); }
-
-    // SVG path drawing across cell centers (0..100 space)
-    function drawPath(p){ const step=100/N; const pts=p.map(t=>({x:t.c*step+step/2, y:t.r*step+step/2})); if(!pts.length){ pathSVG.innerHTML=''; return; } const d=pts.map((pt,i)=> i?`L ${pt.x} ${pt.y}`:`M ${pt.x} ${pt.y}`).join(' '); pathSVG.innerHTML=`<path d="${d}" />`; }
-
-    // ===== Auto Solver (Warnsdorff + BT fallback) =====
-    function solveFrom(sr,sc, strategy='warnsdorff'){
-      const used=Array(N*N).fill(false); const res=[];
-      function deg(r,c){ let k=0; for(const [dr,dc] of MOVES){ const nr=r+dr,nc=c+dc; if(inBounds(nr,nc) && !used[idx(nr,nc)]) k++; } return k; }
-      function step(r,c,depth){ used[idx(r,c)]=true; res.push({r,c}); if(depth===N*N) return true; let moves=MOVES.map(([dr,dc])=>({r:r+dr,c:c+dc})).filter(m=> inBounds(m.r,m.c) && !used[idx(m.r,m.c)]);
-        if(strategy==='warnsdorff'){ moves = moves.map(m=>({...m, d:deg(m.r,m.c)})).sort((a,b)=>a.d-b.d); } else { // backtrack random order
-          for(let i=moves.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [moves[i],moves[j]]=[moves[j],moves[i]]; }
+  // Order moves by Warnsdorff degree to speed up backtracking
+  function nextMoves(r,c, visited){
+    const list = [];
+    for(const [dr,dc] of MOVES){
+      const nr=r+dr, nc=c+dc;
+      if(inBounds(nr,nc) && !visited[id(nr,nc)]){
+        // onward degree
+        let deg = 0;
+        for(const [dr2,dc2] of MOVES){
+          const rr = nr+dr2, cc = nc+dc2;
+          if(inBounds(rr,cc) && !visited[id(rr,cc)]) deg++;
         }
-        for(const m of moves){ if(step(m.r,m.c, depth+1)) return true; }
-        used[idx(r,c)]=false; res.pop(); return false; }
-      if(step(sr,sc,1)) return res; return [];
-    }
-
-    function autoGenerate(){ status('Searching for a tour…');
-      const order=[]; for(let r=0;r<N;r++) for(let c=0;c<N;c++) order.push({r,c});
-      if(current){ order.sort((a,b)=> (a.r===current.r && a.c===current.c)?-1 : (b.r===current.r && b.c===current.c)?1 : 0); }
-      const strat = strategyEl.value;
-      for(const s of order){ const sol = solveFrom(s.r,s.c,strat); if(sol.length){ autoSolution=sol; status(`Tour found from (${s.r+1},${s.c+1}). Use Play or Auto Play.`); toast('Tour ready!'); return true; } }
-      status('No tour found. Try again.'); return false;
-    }
-
-    async function playAuto(){ if(!autoSolution.length){ toast('Generate first'); return; } animating=true; reset(); startTimer();
-      for(let i=0;i<autoSolution.length && animating;i++){
-        const p=autoSolution[i]; if(i>0){ squares[idx(autoSolution[i-1].r, autoSolution[i-1].c)].querySelector('.knight').textContent=''; }
-        place(p.r,p.c); await new Promise(r=> setTimeout(r, +speedEl.value));
+        list.push({r:nr,c:nc,deg});
       }
-      if(animating) finish(); animating=false;
+    }
+    list.sort((a,b)=>a.deg-b.deg);
+    return list;
+  }
+
+  // Backtracking solver that almost always finds a tour fast for 5x5
+  function solveTour(startR, startC){
+    const total = N*N;
+    const path = new Array(total);
+    const visited = new Array(total).fill(false);
+    path[0] = [startR, startC];
+    visited[id(startR,startC)] = true;
+
+    function dfs(k, r, c){
+      if(k === total) return true;
+      const moves = nextMoves(r,c, visited);
+      for(const m of moves){
+        const idx = id(m.r, m.c);
+        if(!visited[idx]){
+          visited[idx] = true;
+          path[k] = [m.r, m.c];
+          if(dfs(k+1, m.r, m.c)) return true;
+          visited[idx] = false;
+        }
+      }
+      return false;
     }
 
-    async function autoPlayOneTap(){ if(!autoSolution.length){ const ok = autoGenerate(); if(!ok) return; } await playAuto(); }
+    const ok = dfs(1, startR, startC);
+    return ok ? path : null;
+  }
 
-    // ===== Wire up =====
-    btnNew.addEventListener('click', ()=>{ reset(); toast('New game'); });
-    btnHint.addEventListener('click', ()=>{ if(!current){ toast('Place the knight first'); return; } clearHighlights(); const m=legalMoves(current.r,current.c); m.forEach(t=> squares[idx(t.r,t.c)].classList.add('valid')); status(`${m.length} legal moves highlighted.`); });
-    btnUndo.addEventListener('click', undo);
-    btnReset.addEventListener('click', reset);
-    btnAuto.addEventListener('click', autoGenerate);
-    btnPlay.addEventListener('click', playAuto);
-    btnAutoPlay.addEventListener('click', autoPlayOneTap);
-    btnStop.addEventListener('click', ()=>{ animating=false; status('Stopped'); });
+  function randomStart(){
+    // good starts (centerish) usually faster; bias towards middle
+    const candidates = [
+      [2,2],[2,1],[1,2],[2,3],[3,2],
+      [1,1],[1,3],[3,1],[3,3],
+      [0,2],[2,0],[2,4],[4,2],
+    ];
+    const pick = candidates[Math.floor(Math.random()*candidates.length)];
+    return pick;
+  }
 
-    // Init
-    drawBoard();
-  </script>
+  function generateTour(){
+    statusOut.textContent = 'Generating…';
+    // Try multiple random starts quickly until solved (should be immediate on 5×5)
+    let tries = 0, path = null, start = null;
+    while(!path && tries < 50){
+      const [sr,sc] = randomStart();
+      start = [sr,sc];
+      path = solveTour(sr,sc);
+      tries++;
+    }
+    if(!path){
+      // Fallback: brute iterate all starts (still instant for 5×5)
+      outer: for(let sr=0; sr<N; sr++){
+        for(let sc=0; sc<N; sc++){
+          const p = solveTour(sr,sc);
+          if(p){ path = p; start = [sr,sc]; break outer; }
+        }
+      }
+    }
+    tour = path || [];
+    clearMarks();
+    if(tour.length){
+      statusOut.textContent = 'Tour ready. Click “Auto Move”.';
+      updateHUD();
+    }else{
+      statusOut.textContent = 'Failed to generate tour (unexpected). Try New Tour again.';
+    }
+  }
+
+  function stepOnce(){
+    if(!tour.length){
+      generateTour();
+    }
+    if(step === 0){
+      // first step: place knight at start
+      placeStep(0, 'current');
+      step = 1;
+      started = true;
+      updateHUD('Moving…');
+      return;
+    }
+    if(step < tour.length){
+      // move current -> visited, next -> current
+      const [pr, pc] = tour[step-1];
+      const prevCell = cells[id(pr,pc)];
+      prevCell.classList.remove('current');
+      prevCell.classList.add('visited');
+
+      placeStep(step, 'current');
+
+      // draw a soft path hint for previous cell
+      prevCell.classList.add('path');
+
+      step++;
+      updateHUD('Moving…');
+      if(step === tour.length){
+        updateHUD('Solved ✅');
+      }
+    } else {
+      updateHUD('Solved ✅');
+    }
+  }
+
+  // Wire up UI
+  autoBtn.addEventListener('click', stepOnce);
+  newBtn.addEventListener('click', () => { generateTour(); });
+  resetBtn.addEventListener('click', () => { clearMarks(); statusOut.textContent = 'Reset. Click “Auto Move”.'; });
+
+  // Init
+  buildBoard();
+  // Pre-generate a tour so user can start clicking immediately
+  generateTour();
+})();
+</script>
 </body>
 </html>
