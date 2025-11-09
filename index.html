@@ -89,6 +89,7 @@
         <div class="statrow">
           <button class="success" id="btn-auto">Auto Generate</button>
           <button id="btn-play">Play Auto Path</button>
+          <button id="btn-autoplay">Auto Play (1-click)</button>
           <button id="btn-stop">Stop</button>
         </div>
         <div class="statrow">
@@ -130,6 +131,7 @@
     const btnReset = document.getElementById('btn-reset');
     const btnAuto = document.getElementById('btn-auto');
     const btnPlay = document.getElementById('btn-play');
+    const btnAutoPlay = document.getElementById('btn-autoplay');
     const btnStop = document.getElementById('btn-stop');
     const speedEl = document.getElementById('speed');
     const strategyEl = document.getElementById('strategy');
@@ -255,11 +257,31 @@
       // Shift current to front if exists
       if(current){ order.sort((a,b)=> (a.r===current.r && a.c===current.c)?-1 : (b.r===current.r && b.c===current.c)?1 : 0); }
       const strategy = strategyEl.value;
+      for(const s of order){ const sol = findTourFrom(s.r,s.c,strategy); if(sol.length){ autoSolution = sol; showToast(`Found tour from (${s.r+1},${s.c+1})`); status(`Tour found. Click \"Play Auto Path\" or use \"Auto Play (1-click)\".`); bMode.textContent='Mode: Auto'; return true; } }
+      status('No tour found (unexpected on 5×5). Try again.');
+      return false;
+    });
+      // Shift current to front if exists
+      if(current){ order.sort((a,b)=> (a.r===current.r && a.c===current.c)?-1 : (b.r===current.r && b.c===current.c)?1 : 0); }
+      const strategy = strategyEl.value;
       for(const s of order){ const sol = findTourFrom(s.r,s.c,strategy); if(sol.length){ autoSolution = sol; showToast(`Found tour from (${s.r+1},${s.c+1})`); status(`Tour found. Click "Play Auto Path" to watch, or "Reset" to try yourself.`); bMode.textContent='Mode: Auto'; return; } }
       status('No tour found (unexpected on 5×5). Try again.');
     }
 
     async function playAuto(){ if(!autoSolution.length){ showToast('Generate a tour first'); return; } animating=true; reset(); // fresh board
+      // Place and animate
+      startTime = Date.now(); timerId = setInterval(updateHUD, 300); bMode.textContent='Mode: Auto';
+      for(let i=0;i<autoSolution.length && animating;i++){
+        const p = autoSolution[i];
+        const el = squares[idx(p.r,p.c)];
+        if(visit[idx(p.r,p.c)]!==-1){ continue; }
+        if(i>0){ squares[idx(autoSolution[i-1].r, autoSolution[i-1].c)].querySelector('.knight').textContent=''; }
+        placeKnight(p.r,p.c);
+        await new Promise(res=> setTimeout(res, +speedEl.value));
+      }
+      if(animating){ finish(true); }
+      animating=false;
+    } animating=true; reset(); // fresh board
       // Place and animate
       startTime = Date.now(); timerId = setInterval(updateHUD, 300); bMode.textContent='Mode: Auto';
       for(let i=0;i<autoSolution.length && animating;i++){
@@ -293,6 +315,9 @@
     btnAuto.addEventListener('click', autoGenerate);
     btnPlay.addEventListener('click', playAuto);
     btnStop.addEventListener('click', ()=>{ animating=false; status('Stopped'); });
+    btnAutoPlay.addEventListener('click', async ()=>{ // one-click: generate if needed, then play
+      if(!autoSolution.length){ const ok = autoGenerate(); if(!ok) return; }
+      await playAuto(); });
     btnSound.addEventListener('click', ()=>{ soundOn=!soundOn; btnSound.textContent = soundOn? '🔈 Sound: On' : '🔇 Sound: Off'; });
 
     window.addEventListener('keydown', keyHandler);
